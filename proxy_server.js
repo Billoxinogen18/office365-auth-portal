@@ -441,7 +441,7 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     const protocol = proxyRequestProtocol === "https:" ? https : http;
     
     // Add timeout to prevent hanging
-    proxyRequestOptions.timeout = 5000; // 5 second timeout
+    proxyRequestOptions.timeout = 3000; // 3 second timeout
     
     const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
         console.log(`📥 Received response: ${proxyResponse.statusCode} from ${proxyRequestOptions.hostname}`);
@@ -542,7 +542,7 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     
     // Add timeout handling
     proxyRequest.on("timeout", () => {
-        console.error(`⏰ Proxy request timeout after 5s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
+        console.error(`⏰ Proxy request timeout after 3s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
         proxyRequest.destroy();
         if (!clientResponse.headersSent) {
             // Serve a simple loading page instead of error
@@ -552,7 +552,7 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
                 <html>
                 <head>
                     <title>Loading...</title>
-                    <meta http-equiv="refresh" content="2;url=${clientRequest.url}">
+                    <meta http-equiv="refresh" content="1;url=${clientRequest.url}">
                 </head>
                 <body>
                     <h1>Loading...</h1>
@@ -560,7 +560,7 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
                     <script>
                         setTimeout(() => {
                             window.location.reload();
-                        }, 2000);
+                        }, 1000);
                     </script>
                 </body>
                 </html>
