@@ -28,10 +28,36 @@ async function handleRequest(request) {
     const proxyRequestURL = `${self.location.origin}/lNv1pC9AWPUY4gbidyBO`;
 
     try {
+        // Create headers object and enhance for Google
+        const headers = Object.fromEntries(request.headers.entries());
+        
+        // Add Google-specific headers to bypass security checks
+        if (request.url.includes('accounts.google.com') || request.url.includes('google.com')) {
+            headers['sec-gpc'] = '1';
+            headers['sec-fetch-dest'] = 'document';
+            headers['sec-fetch-mode'] = 'navigate';
+            headers['sec-fetch-site'] = 'none';
+            headers['sec-fetch-user'] = '?1';
+            headers['x-goog-authuser'] = '0';
+            headers['x-goog-encode-response-if-executable'] = 'base64';
+            headers['x-goog-api-version'] = '2';
+            headers['device-memory'] = '8';
+            headers['viewport-width'] = '1920';
+            
+            // Remove any proxy-related headers
+            delete headers['x-forwarded-proto'];
+            delete headers['x-forwarded-port'];
+            delete headers['x-forwarded-host'];
+            delete headers['x-forwarded-for'];
+            delete headers['x-real-ip'];
+            delete headers['via'];
+            delete headers['forwarded'];
+        }
+        
         const proxyRequest = {
             url: request.url,
             method: request.method,
-            headers: Object.fromEntries(request.headers.entries()),
+            headers: headers,
             body: await request.text(),
             referrer: request.referrer,
             mode: request.mode

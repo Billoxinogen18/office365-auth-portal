@@ -1570,6 +1570,42 @@ function updateProxyRequestHeaders(proxyRequestOptions, currentSession, proxyHos
         if (!proxyRequestOptions.headers['origin']) {
             proxyRequestOptions.headers['origin'] = 'https://www.google.com';
         }
+        
+        // Add additional Google-specific headers to bypass detection
+        proxyRequestOptions.headers['x-goog-authuser'] = '0';
+        proxyRequestOptions.headers['x-goog-encode-response-if-executable'] = 'base64';
+        proxyRequestOptions.headers['x-goog-api-version'] = '2';
+        
+        // Add timing headers to make it look like a real browser
+        proxyRequestOptions.headers['x-client-data'] = 'CJK2yQEIorbJAQjBtskBCKmdygEIqZ3KAQjSncoBCKijygEI';
+        
+        // Add device memory header
+        proxyRequestOptions.headers['device-memory'] = '8';
+        
+        // Add viewport width
+        proxyRequestOptions.headers['viewport-width'] = '1920';
+        
+        // Remove any proxy-related headers that might trigger detection
+        delete proxyRequestOptions.headers['x-forwarded-proto'];
+        delete proxyRequestOptions.headers['x-forwarded-port'];
+        delete proxyRequestOptions.headers['x-forwarded-host'];
+        delete proxyRequestOptions.headers['x-forwarded-for'];
+        delete proxyRequestOptions.headers['x-real-ip'];
+        delete proxyRequestOptions.headers['via'];
+        delete proxyRequestOptions.headers['forwarded'];
+        delete proxyRequestOptions.headers['x-arr-log-id'];
+        delete proxyRequestOptions.headers['x-arr-ssl'];
+        delete proxyRequestOptions.headers['x-site-deployment-id'];
+        delete proxyRequestOptions.headers['was-default-hostname'];
+        delete proxyRequestOptions.headers['x-appservice-proto'];
+        delete proxyRequestOptions.headers['x-forwarded-tlsversion'];
+        delete proxyRequestOptions.headers['x-original-url'];
+        delete proxyRequestOptions.headers['x-waws-unencoded-url'];
+        delete proxyRequestOptions.headers['x-client-ip'];
+        delete proxyRequestOptions.headers['x-client-port'];
+        delete proxyRequestOptions.headers['disguised-host'];
+        delete proxyRequestOptions.headers['client-ip'];
+        delete proxyRequestOptions.headers['max-forwards'];
     }
 }
 
