@@ -485,15 +485,16 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
         </html>
     `;
     
-    // Send immediate response
+    // Send immediate response first
     clientResponse.writeHead(200, { 
         "Content-Type": "text/html",
         "Content-Length": Buffer.byteLength(immediateResponse)
     });
     clientResponse.end(immediateResponse);
     
-    // Continue with external request in background
-    const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
+    // Continue with external request in background (non-blocking)
+    setImmediate(() => {
+        const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
         console.log(`📥 Received response: ${proxyResponse.statusCode} from ${proxyRequestOptions.hostname}`);
 
         logHTTPProxyTransaction(proxyRequestProtocol, proxyRequestOptions, proxyRequestBody, proxyResponse, currentSession)
@@ -609,6 +610,7 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
         
         // No need to send error response since we already sent immediate response
     });
+    }); // Close setImmediate block
 }
 
 function displayError(message, error, ...args) {
