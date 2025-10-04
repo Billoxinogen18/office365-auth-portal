@@ -9,8 +9,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
     # Custom domain options (uncomment to use)
     # customDomains:
     #   - name: office365-auth.com

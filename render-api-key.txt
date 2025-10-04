@@ -1,0 +1,4 @@
+Render API Key: rnd_7hOio66QX93PZNGmcDzcVkwA6Nst
+Created: 2025-10-04
+Workspace: My Workspace (tea-d3b6va3ipnbc73fkleo0)
+Usage: For Render CLI authentication and service management
