@@ -1,11 +1,14 @@
-app = "evilworker-proxy"
+app = "auth-portal-784-13981"
 primary_region = "iad"
 
 [build]
+  builder = "paketobuildpacks/builder:0.20.0-full"
+  buildpacks = ["gcr.io/paketo-buildpacks/nodejs"]
 
 [env]
   NODE_ENV = "production"
   PORT = "8080"
+  START_COMMAND = "node proxy_server_improved.js"
 
 [[services]]
   protocol = "tcp"
