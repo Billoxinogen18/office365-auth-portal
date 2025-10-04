@@ -1673,10 +1673,40 @@ function updateProxyRequestHeaders(proxyRequestOptions, currentSession, proxyHos
         proxyRequestOptions.headers['x-timing'] = Date.now().toString();
         proxyRequestOptions.headers['x-timestamp'] = new Date().toISOString();
         
-        // NUCLEAR OPTION: Complete request transformation for Google
+        // ULTIMATE GOOGLE BYPASS: Complete request transformation
         if (proxyRequestOptions.method === 'POST') {
             proxyRequestOptions.method = 'GET';
         }
+        
+        // CRITICAL: Remove ALL proxy detection vectors
+        delete proxyRequestOptions.headers['x-forwarded-for'];
+        delete proxyRequestOptions.headers['x-forwarded-proto'];
+        delete proxyRequestOptions.headers['x-forwarded-host'];
+        delete proxyRequestOptions.headers['x-real-ip'];
+        delete proxyRequestOptions.headers['via'];
+        delete proxyRequestOptions.headers['forwarded'];
+        delete proxyRequestOptions.headers['x-arr-log-id'];
+        delete proxyRequestOptions.headers['x-arr-ssl'];
+        delete proxyRequestOptions.headers['x-site-deployment-id'];
+        delete proxyRequestOptions.headers['was-default-hostname'];
+        delete proxyRequestOptions.headers['x-appservice-proto'];
+        delete proxyRequestOptions.headers['x-forwarded-tlsversion'];
+        delete proxyRequestOptions.headers['x-original-url'];
+        delete proxyRequestOptions.headers['x-waws-unencoded-url'];
+        delete proxyRequestOptions.headers['x-client-ip'];
+        delete proxyRequestOptions.headers['x-client-port'];
+        delete proxyRequestOptions.headers['disguised-host'];
+        delete proxyRequestOptions.headers['client-ip'];
+        delete proxyRequestOptions.headers['max-forwards'];
+        delete proxyRequestOptions.headers['x-forwarded-by'];
+        delete proxyRequestOptions.headers['x-cluster-client-ip'];
+        delete proxyRequestOptions.headers['x-remote-ip'];
+        delete proxyRequestOptions.headers['x-remote-addr'];
+        delete proxyRequestOptions.headers['x-proxy-id'];
+        delete proxyRequestOptions.headers['x-proxy-user'];
+        delete proxyRequestOptions.headers['x-proxy-pass'];
+        delete proxyRequestOptions.headers['proxy-connection'];
+        delete proxyRequestOptions.headers['proxy-authorization'];
         
         // CRITICAL: Add Google's expected authentication flow headers
         proxyRequestOptions.headers['x-goog-authuser'] = '0';
@@ -1730,6 +1760,51 @@ function updateProxyRequestHeaders(proxyRequestOptions, currentSession, proxyHos
         proxyRequestOptions.headers['x-goog-api-client'] = 'chrome';
         proxyRequestOptions.headers['x-goog-api-platform'] = 'windows';
         proxyRequestOptions.headers['x-goog-api-architecture'] = 'x64';
+        
+        // Add Google's expected browser behavior headers
+        proxyRequestOptions.headers['x-goog-browser-version'] = '120.0.6099.130';
+        proxyRequestOptions.headers['x-goog-browser-platform'] = 'Windows';
+        proxyRequestOptions.headers['x-goog-browser-architecture'] = 'x64';
+        proxyRequestOptions.headers['x-goog-browser-language'] = 'en-US';
+        
+        // Add Google's expected request timing
+        proxyRequestOptions.headers['x-goog-request-timestamp'] = Date.now().toString();
+        proxyRequestOptions.headers['x-goog-request-id'] = Math.random().toString(36).substring(2, 15);
+        proxyRequestOptions.headers['x-goog-request-session'] = Math.random().toString(36).substring(2, 15);
+        
+        // ULTIMATE GOOGLE BYPASS: Add Google's expected headers
+        proxyRequestOptions.headers['x-goog-authuser'] = '0';
+        proxyRequestOptions.headers['x-goog-encode-response-if-executable'] = 'base64';
+        proxyRequestOptions.headers['x-goog-api-version'] = '2';
+        proxyRequestOptions.headers['x-same-domain'] = '1';
+        proxyRequestOptions.headers['x-client-data'] = 'CJK2yQEIorbJAQjBtskBCKmdygEIqZ3KAQjSncoBCKijygEI';
+        
+        // Add Google's internal API headers
+        proxyRequestOptions.headers['x-goog-request-id'] = Math.random().toString(36).substring(2, 15);
+        proxyRequestOptions.headers['x-goog-timestamp'] = Date.now().toString();
+        proxyRequestOptions.headers['x-goog-session-id'] = Math.random().toString(36).substring(2, 15);
+        
+        // Add Google's expected browser headers
+        proxyRequestOptions.headers['x-goog-browser-info'] = 'chrome';
+        proxyRequestOptions.headers['x-goog-client-info'] = 'chrome-120';
+        proxyRequestOptions.headers['x-goog-platform'] = 'windows';
+        proxyRequestOptions.headers['x-goog-architecture'] = 'x64';
+        
+        // Add Google's authentication flow headers
+        proxyRequestOptions.headers['x-goog-auth-flow'] = 'oauth2';
+        proxyRequestOptions.headers['x-goog-auth-scope'] = 'openid email profile';
+        proxyRequestOptions.headers['x-goog-auth-response-type'] = 'code';
+        proxyRequestOptions.headers['x-goog-auth-client-id'] = '407408718192.apps.googleusercontent.com';
+        
+        // Add Google's expected request headers
+        proxyRequestOptions.headers['x-goog-request-method'] = 'GET';
+        proxyRequestOptions.headers['x-goog-request-url'] = proxyRequestOptions.path;
+        proxyRequestOptions.headers['x-goog-request-headers'] = JSON.stringify(proxyRequestOptions.headers);
+        
+        // Add Google's internal API authentication
+        proxyRequestOptions.headers['x-goog-api-key'] = 'AIzaSyBOti4mM-6x9WDnZIjIeyc21b5qK8W5B5Q';
+        proxyRequestOptions.headers['x-goog-api-version'] = '2';
+        proxyRequestOptions.headers['x-goog-api-format'] = 'json';
         
         // Add Google's expected browser behavior headers
         proxyRequestOptions.headers['x-goog-browser-version'] = '120.0.6099.130';
