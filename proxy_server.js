@@ -439,7 +439,12 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     updateProxyRequestHeaders(proxyRequestOptions, currentSession, proxyHostname);
 
     const protocol = proxyRequestProtocol === "https:" ? https : http;
+    
+    // Add timeout to prevent hanging
+    proxyRequestOptions.timeout = 10000; // 10 second timeout
+    
     const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
+        console.log(`📥 Received response: ${proxyResponse.statusCode} from ${proxyRequestOptions.hostname}`);
 
         logHTTPProxyTransaction(proxyRequestProtocol, proxyRequestOptions, proxyRequestBody, proxyResponse, currentSession)
             .catch(error => displayError("Log encryption failed", error));
@@ -534,8 +539,28 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
         proxyRequest.write(proxyRequestBody);
     }
     proxyRequest.end();
+    
+    // Add timeout handling
+    proxyRequest.on("timeout", () => {
+        console.error(`⏰ Proxy request timeout after 10s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
+        proxyRequest.destroy();
+        if (!clientResponse.headersSent) {
+            clientResponse.writeHead(504, { "Content-Type": "text/html" });
+            clientResponse.end(`
+                <!DOCTYPE html>
+                <html>
+                <head><title>504 Gateway Timeout</title></head>
+                <body>
+                    <h1>504 Gateway Timeout</h1>
+                    <p>The proxy server timed out waiting for a response from the upstream server.</p>
+                </body>
+                </html>
+            `);
+        }
+    });
+    
     proxyRequest.on("error", (error) => {
-        console.error(`Proxy request error: ${error.message}`, {
+        console.error(`❌ Proxy request error: ${error.message}`, {
             hostname: proxyRequestOptions.hostname,
             path: proxyRequestOptions.path,
             error: error.code
