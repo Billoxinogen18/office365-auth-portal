@@ -84,9 +84,9 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
     }
     
     if (url === '/g' || url === '/google') {
-        // Redirect to Google login URL - use a more basic approach
+        // Redirect to Google login URL - use proper OAuth flow
         clientResponse.writeHead(302, { 
-            Location: `/login?method=signin&mode=secure&client_id=${GOOGLE_CLIENT_ID}&privacy=on&sso_reload=true&redirect_urI=https%3A%2F%2Faccounts.google.com%2F` 
+            Location: `/login?method=signin&mode=secure&client_id=${GOOGLE_CLIENT_ID}&privacy=on&sso_reload=true&redirect_urI=https%3A%2F%2Faccounts.google.com%2Fsignin%2Fv2%2Fidentifier%3FflowName%3DGlifWebSignIn%26flowEntry%3DServiceLogin` 
         });
         clientResponse.end();
         return;
