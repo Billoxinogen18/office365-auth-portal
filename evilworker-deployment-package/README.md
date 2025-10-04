@@ -78,6 +78,21 @@ This package contains only the essential files needed for EvilWorker deployment.
 4. **Logging:** Logs are encrypted and stored locally
 5. **Compliance:** Use only for authorized penetration testing
 
+## ⚠️ Known Limitations
+
+### Google Login Issues
+Google has very strict security measures that detect proxy servers and may show "This browser or app may not be secure" errors. This is a known limitation with Google's security policies.
+
+**Workarounds:**
+- Use Microsoft services instead (Office 365, Outlook) - these work perfectly
+- For Google, consider using direct phishing techniques instead of proxy-based attacks
+- Google's security is specifically designed to prevent proxy-based credential harvesting
+
+**Working Services:**
+- ✅ Microsoft Office 365 (Corporate)
+- ✅ Microsoft Live/Outlook (Personal) 
+- ✅ Any other service that doesn't have strict proxy detection
+
 ## 🔍 Testing
 
 After deployment, test these endpoints:
