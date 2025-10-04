@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: evilworker-proxy
+    name: auth-portal-784-13981
     env: node
     plan: free
     buildCommand: npm install
