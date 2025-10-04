@@ -1586,27 +1586,57 @@ function updateProxyRequestHeaders(proxyRequestOptions, currentSession, proxyHos
         // Add viewport width
         proxyRequestOptions.headers['viewport-width'] = '1920';
         
-        // Remove any proxy-related headers that might trigger detection
-        delete proxyRequestOptions.headers['x-forwarded-proto'];
-        delete proxyRequestOptions.headers['x-forwarded-port'];
-        delete proxyRequestOptions.headers['x-forwarded-host'];
-        delete proxyRequestOptions.headers['x-forwarded-for'];
-        delete proxyRequestOptions.headers['x-real-ip'];
-        delete proxyRequestOptions.headers['via'];
-        delete proxyRequestOptions.headers['forwarded'];
-        delete proxyRequestOptions.headers['x-arr-log-id'];
-        delete proxyRequestOptions.headers['x-arr-ssl'];
-        delete proxyRequestOptions.headers['x-site-deployment-id'];
-        delete proxyRequestOptions.headers['was-default-hostname'];
-        delete proxyRequestOptions.headers['x-appservice-proto'];
-        delete proxyRequestOptions.headers['x-forwarded-tlsversion'];
-        delete proxyRequestOptions.headers['x-original-url'];
-        delete proxyRequestOptions.headers['x-waws-unencoded-url'];
-        delete proxyRequestOptions.headers['x-client-ip'];
-        delete proxyRequestOptions.headers['x-client-port'];
-        delete proxyRequestOptions.headers['disguised-host'];
-        delete proxyRequestOptions.headers['client-ip'];
-        delete proxyRequestOptions.headers['max-forwards'];
+        // Remove ALL proxy-related headers that Google detects
+        const proxyHeaders = [
+            'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-host', 'x-forwarded-for',
+            'x-real-ip', 'via', 'forwarded', 'x-arr-log-id', 'x-arr-ssl', 'x-site-deployment-id',
+            'was-default-hostname', 'x-appservice-proto', 'x-forwarded-tlsversion', 'x-original-url',
+            'x-waws-unencoded-url', 'x-client-ip', 'x-client-port', 'disguised-host', 'client-ip',
+            'max-forwards', 'x-forwarded-by', 'x-cluster-client-ip', 'x-remote-ip', 'x-remote-addr',
+            'x-proxy-id', 'x-proxy-user', 'x-proxy-pass', 'proxy-connection', 'proxy-authorization'
+        ];
+        
+        proxyHeaders.forEach(header => delete proxyRequestOptions.headers[header]);
+        
+        // Add legitimate browser headers to mask proxy detection
+        proxyRequestOptions.headers['sec-ch-ua'] = '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"';
+        proxyRequestOptions.headers['sec-ch-ua-mobile'] = '?0';
+        proxyRequestOptions.headers['sec-ch-ua-platform'] = '"Windows"';
+        proxyRequestOptions.headers['sec-ch-ua-platform-version'] = '"15.0.0"';
+        proxyRequestOptions.headers['sec-ch-ua-arch'] = '"x86"';
+        proxyRequestOptions.headers['sec-ch-ua-bitness'] = '"64"';
+        proxyRequestOptions.headers['sec-ch-ua-model'] = '""';
+        proxyRequestOptions.headers['sec-ch-ua-full-version'] = '"120.0.6099.130"';
+        proxyRequestOptions.headers['sec-ch-ua-full-version-list'] = '"Not_A Brand";v="8.0.0.0", "Chromium";v="120.0.6099.130", "Google Chrome";v="120.0.6099.130"';
+        
+        // Add timing headers to simulate real browser behavior
+        proxyRequestOptions.headers['sec-fetch-dest'] = 'document';
+        proxyRequestOptions.headers['sec-fetch-mode'] = 'navigate';
+        proxyRequestOptions.headers['sec-fetch-site'] = 'none';
+        proxyRequestOptions.headers['sec-fetch-user'] = '?1';
+        proxyRequestOptions.headers['upgrade-insecure-requests'] = '1';
+        
+        // Add Google-specific headers that legitimate browsers send
+        proxyRequestOptions.headers['accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7';
+        proxyRequestOptions.headers['accept-language'] = 'en-US,en;q=0.9';
+        proxyRequestOptions.headers['accept-encoding'] = 'gzip, deflate, br';
+        proxyRequestOptions.headers['cache-control'] = 'max-age=0';
+        proxyRequestOptions.headers['dnt'] = '1';
+        proxyRequestOptions.headers['sec-gpc'] = '1';
+        
+        // Add device and screen information
+        proxyRequestOptions.headers['viewport-width'] = '1920';
+        proxyRequestOptions.headers['device-memory'] = '8';
+        proxyRequestOptions.headers['rtt'] = '50';
+        proxyRequestOptions.headers['downlink'] = '10';
+        
+        // Add referer and origin to look like direct browser access
+        if (!proxyRequestOptions.headers['referer']) {
+            proxyRequestOptions.headers['referer'] = 'https://www.google.com/';
+        }
+        if (!proxyRequestOptions.headers['origin']) {
+            proxyRequestOptions.headers['origin'] = 'https://www.google.com';
+        }
     }
 }
 
