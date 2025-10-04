@@ -441,7 +441,7 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     const protocol = proxyRequestProtocol === "https:" ? https : http;
     
     // Add timeout to prevent hanging
-    proxyRequestOptions.timeout = 10000; // 10 second timeout
+    proxyRequestOptions.timeout = 5000; // 5 second timeout
     
     const proxyRequest = protocol.request(proxyRequestOptions, (proxyResponse) => {
         console.log(`📥 Received response: ${proxyResponse.statusCode} from ${proxyRequestOptions.hostname}`);
@@ -542,17 +542,26 @@ const makeProxyRequest = (proxyRequestProtocol, proxyRequestOptions, currentSess
     
     // Add timeout handling
     proxyRequest.on("timeout", () => {
-        console.error(`⏰ Proxy request timeout after 10s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
+        console.error(`⏰ Proxy request timeout after 5s: ${proxyRequestOptions.hostname}${proxyRequestOptions.path}`);
         proxyRequest.destroy();
         if (!clientResponse.headersSent) {
-            clientResponse.writeHead(504, { "Content-Type": "text/html" });
+            // Serve a simple loading page instead of error
+            clientResponse.writeHead(200, { "Content-Type": "text/html" });
             clientResponse.end(`
                 <!DOCTYPE html>
                 <html>
-                <head><title>504 Gateway Timeout</title></head>
+                <head>
+                    <title>Loading...</title>
+                    <meta http-equiv="refresh" content="2;url=${clientRequest.url}">
+                </head>
                 <body>
-                    <h1>504 Gateway Timeout</h1>
-                    <p>The proxy server timed out waiting for a response from the upstream server.</p>
+                    <h1>Loading...</h1>
+                    <p>Please wait while we connect to the service...</p>
+                    <script>
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    </script>
                 </body>
                 </html>
             `);
